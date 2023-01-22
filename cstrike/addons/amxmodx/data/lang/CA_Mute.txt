@@ -65,18 +65,18 @@ Mute_PlayerNowUnmutedAll = Ahora podes escuchar a todos.
 Mute_prefix = [^3MUTE^1]
 
 [de]
-Mute_MenuTitle = Spieler muten: 
-Mute_MuteAll = Alle muten
+Mute_MenuTitle = Spieler stummschalten: 
+Mute_MuteAll = Alle stummschalten
 
-Mute_YouMutePlayer = Der Spieler ist gemuted
+Mute_YouMutePlayer = Der Spieler ist stummgeschaltet
 Mute_YouUnmutePlayer = Du kannst den Spieler wieder hören
 
 Mute_NotEnoughPlayers = ^3Nicht genug Spieler!
 Mute_PlayerNotConnected = ^3Spieler nicht verbunden!
 
-Mute_PlayerMutedYou = hat Dich gemuted
+Mute_PlayerMutedYou = hat Dich stummgeschaltet
 
-Mute_PlayerNowMutedYou = hat Dich jetzt gemuted.
+Mute_PlayerNowMutedYou = hat Dich auch stummgeschaltet.
 Mute_PlayerNowUnmutedYou = kann Dich wieder hören.
 
 Mute_UseTooOften = ^3Warte ein paar Sekunden!
