@@ -13,3 +13,7 @@ RankRestrictions_Warning_MinKills = ^4* ^1Доступ до чату забор�
 [ro]
 RankRestrictions_Warning_MinLevel = ^4* ^1Accesul la chat este interzis! Ai nevoie de nivelul ^4%i^1.
 RankRestrictions_Warning_MinKills = ^4* ^1Accesul la chat este interzis! Trebuie sa ucizi ^4%i ^1inamici.
+
+[de]
+RankRestrictions_Warning_MinLevel = ^4* ^1Chat-Zugang verweigert, da Du noch nicht den ^4%i ^1Status erreicht hast!
+RankRestrictions_Warning_MinKills = ^4* ^1Chat-Zugang verweigert, da Du noch nicht ^4%i ^1Gegner getötet hast!
