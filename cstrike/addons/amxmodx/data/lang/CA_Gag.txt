@@ -151,7 +151,7 @@ Gag_prefix = [^3GAG^1]
 
 [de]
 Gag_MenuTitle_PlayersList = Spieler stummschalten
-Gag_MenuTitle_SelectReason = Wählen einen Grund:
+Gag_MenuTitle_SelectReason = Wähle einen Grund:
 Gag_MenuTitle_SelectTime = Wähle die Dauer:
 Gag_MenuItem_RemoveGag = \gEntfernen\w
 Gag_MenuItem_EditGag = Bearbeiten
@@ -169,7 +169,7 @@ Gag_MenuItem_Length = Dauer:
 Gag_MenuItem_Expire = Läuft ab:
 Gag_MenuItem_Left = Verbleibend:
 
-Gag_SelectFlags = Mute-Parameter: [ \r%n\y ]
+Gag_SelectFlags = Parameter: [ \r%n\y ]
 Gag_EnterReason = Der Grund ist ->\n
 Gag_EnterTime = Dauer setzen ->
 
@@ -180,21 +180,21 @@ Gag_ChatMsg_Reason = ^4Grund:^1
 Gag_NotSet = N/A
 Gag_Permanent = Permanent
 
-Gag_AdminGagPlayer = ^3Mute ^4%s^1
-Gag_AdminUngagPlayer = ^3Mute ^1von ^4%s^1 aufheben
-Gag_PlayerNotConnected = ^3Spieler nicht verbunden!
+Gag_AdminGagPlayer = ^3Stummschalten ^4%s^1
+Gag_AdminUngagPlayer = ^3Stummschaltung ^1von ^4%s^1 aufheben
+Gag_PlayerNotConnected = ^3Spieler ist nicht verbunden!
 Gag_PlayerAlreadyRemoved = ^3Spieler ^4%n^1 bereits entfernt!
-Gag_PlayerExpiredGag = ^3Mute des Spielers ^4%n^1 abgelaufen.
+Gag_PlayerExpiredGag = ^3Stummschaltung von ^4%n^1 ist abgelaufen.
 
 Gag_NotEnoughPlayers = ^3Nicht genug Spieler
 Gag_NoTemplatesAvailable_Reasons = ^3Keine Gründe vorhanden.
 Gag_NoTemplatesAvailable_Times = ^3Keine Dauer vorhanden.
 
 Gag_YouSetManual_Time = ^3Dauer:^1
-Gag_YouSetManual_Reason = ^3Grund für Muten:^1
+Gag_YouSetManual_Reason = ^3Grund für Stummschaltung:^1
 Gag_NotValidTimeEntered = ^3Die Dauer stimmt nicht:^1
 
-Gag_NotifyPlayer_BlockedChat = ^1Dein ^3Chat wurde blockeriert^1.
+Gag_NotifyPlayer_BlockedChat = ^1Dein ^3Chat ist stummschaltet^1.
 
 Gag_prefix = [^3GAG^1]
 
