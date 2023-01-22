@@ -15,3 +15,8 @@ CA_ANTIFLOOD_CHAT_PREFIX            = ^1[^4AntiFlood^1]
 
 CA_ANTIFLOOD_CHAT_STOP_FLOODING     = ^1Opreste-te din ^3flood.
 CA_ANTIFLOOD_CHAT_EQUAL_MESSAGE     = ^1Mesajul tau ^3se repeta! ^4Exerseaza-ti imaginatia^1.
+
+[de]
+CA_ANTIFLOOD_CHAT_PREFIX            = ^1[^4AntiFlood^1]
+CA_ANTIFLOOD_CHAT_STOP_FLOODING     = ^1Bitte nicht ^3zu viele Eingaben auf einmal!
+CA_ANTIFLOOD_CHAT_EQUAL_MESSAGE     = ^1Du ^3wiederholst Dich! ^4Es wird langsam langweilig^1.
