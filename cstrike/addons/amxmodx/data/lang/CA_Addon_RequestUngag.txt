@@ -15,3 +15,9 @@ RequestUnGag_NoAccess = ^4* ^1Chat-ul tau nu este blocat.
 RequestUnGag_TimeOut = ^4* ^1Incearca-l in %i secunde.
 RequestUnGag_Requested = ^4* ^1Jucatorul ^4%n ^1cere permisiunea de a i se inlatura gag-ul. Pentru a-i scoate gag-ul scrie: ^4/ungag %i^1.
 RequestUnGag_YouRequested = ^4* ^1Ai cerut permisiunea de a ti se inlatura gag-ul.
+
+[de]
+RequestUnGag_NoAccess = ^4* ^1Dein Chat wird nicht blockiert.
+RequestUnGag_TimeOut = ^4* ^1Versuch es noch einmal in %i Sekunden.
+RequestUnGag_Requested = ^4* ^1Spieler ^4%n ^1 bittet darum, dass sein Knebel entfernt wird. Zum Entfernen, schreibe: ^4/ungag %i^1
+RequestUnGag_YouRequested = ^4* ^1Du bittest um die Entfernung deines Knebel.
