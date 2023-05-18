@@ -11,9 +11,9 @@
 #pragma tabsize 2
 
 
-  /* ----- START SETTINGS----- */
+  /* ----- START SETTINGS ----- */
 const Float: GAG_THINKER_FREQ = 3.0
-  /* ----- END OF SETTINGS----- */
+  /* ----- END OF SETTINGS ----- */
 
 static g_currentGags[MAX_PLAYERS + 1][gagData_s]
 static g_adminTempData[MAX_PLAYERS + 1][gagData_s]
@@ -21,6 +21,7 @@ static bool: g_inEditMenu[MAX_PLAYERS + 1] // HACK: need for transmit data per m
 
 static Array: g_gagReasonsTemplates, g_gagReasonsTemplates_size
 static Array: g_gagTimeTemplates, g_gagTimeTemplates_size
+static Array: g_chatWhitelistCmds, g_chatWhitelistCmds_size
 
 new ca_gag_times[64],
   ca_gag_immunity_flags[16],
@@ -73,13 +74,15 @@ public plugin_precache() {
   register_dictionary("time.txt")
 
   register_srvcmd("ca_gag_add_reason", "SrvCmd_AddReason")
-  register_srvcmd("ca_gag_show_templates", "SrvCmd_ShowTemplates");
+  register_srvcmd("ca_gag_show_templates", "SrvCmd_ShowTemplates")
+  register_srvcmd("ca_gag_add_chat_whitelist_cmd", "SrvCmd_AddWhitelistCmd")
   register_srvcmd("ca_gag_reload_config", "SrvCmd_ReloadConfig")
 
   Create_CVars()
 
   g_gagReasonsTemplates = ArrayCreate(reason_s)
   g_gagTimeTemplates = ArrayCreate()
+  g_chatWhitelistCmds = ArrayCreate(MAX_WHITELIST_CMD_LEN)
 
   LoadConfig()
 
@@ -114,7 +117,7 @@ public plugin_init() {
   register_clcmd("amx_gagmenu", "ClCmd_Gag", (accessFlags | accessFlagsHigh), .FlagManager = false)
 
   for(new i; i < sizeof g_adminChatCmds; i++)
-    register_clcmd(g_adminChatCmds[i], "ClCmd_adminSay", ADMIN_CHAT);
+    register_clcmd(g_adminChatCmds[i], "ClCmd_adminSay", ADMIN_CHAT)
 
   CA_Log(logLevel_Debug, "[CA]: Gag initialized!")
 
@@ -363,6 +366,7 @@ public MenuHandler_PlayersList(const id, const menu, const item) {
   }
 
   menu_item_getinfo(menu, item, g_dummy, g_itemInfo, charsmax(g_itemInfo), g_itemName, charsmax(g_itemName), g_dummy)
+  menu_destroy(menu)
 
   new userID = strtol(g_itemInfo)
 
@@ -373,7 +377,6 @@ public MenuHandler_PlayersList(const id, const menu, const item) {
     client_print_color(id, print_team_red, "%L %L", id, "Gag_prefix", id, "Gag_PlayerNotConnected")
 
     MenuShow_PlayersList(id)
-    menu_destroy(menu)
     return PLUGIN_HANDLED
   }
 
@@ -384,7 +387,6 @@ public MenuHandler_PlayersList(const id, const menu, const item) {
     g_adminTempData[id][gd_target] = target
 
     MenuShow_ShowGag(id)
-    menu_destroy(menu)
     return PLUGIN_HANDLED
   }
 
@@ -392,7 +394,6 @@ public MenuHandler_PlayersList(const id, const menu, const item) {
   GagData_GetPersonalData(id, target, g_adminTempData[id])
 
   MenuShow_SelectReason(id)
-  menu_destroy(menu)
   return PLUGIN_HANDLED
 }
 
@@ -494,13 +495,12 @@ public MenuHandler_SelectReason(const id, const menu, const item) {
   }
 
   menu_item_getinfo(menu, item, g_dummy, g_itemInfo, charsmax(g_itemInfo), g_itemName, charsmax(g_itemName), g_dummy)
+  menu_destroy(menu)
 
   new reasonID = strtol(g_itemInfo)
 
   if(reasonID == ITEM_ENTER_GAG_REASON) {
     client_cmd(id, "messagemode enter_GagReason")
-
-    menu_destroy(menu)
     return PLUGIN_HANDLED
   }
 
@@ -513,29 +513,22 @@ public MenuHandler_SelectReason(const id, const menu, const item) {
   // Time not set
   if(reason[r_time] == 0) {
     MenuShow_SelectTime(id)
-
-    menu_destroy(menu)
     return PLUGIN_HANDLED
   }
 
   if(g_inEditMenu[id]) {
     MenuShow_EditGag(id)
-
-    menu_destroy(menu)
     return PLUGIN_HANDLED
   }
 
   if(reason[r_flags] == gagFlag_Removed) {
     MenuShow_SelectFlags(id)
-
-    menu_destroy(menu)
     return PLUGIN_HANDLED
   }
 
   Gag_Save(id, target, reason[r_time], reason[r_flags])
   GagData_Reset(g_adminTempData[id])
 
-  menu_destroy(menu)
   return PLUGIN_HANDLED
 }
 
@@ -606,13 +599,12 @@ public MenuHandler_SelectTime(const id, const menu, const item) {
   }
 
   menu_item_getinfo(menu, item, g_dummy, g_itemInfo, charsmax(g_itemInfo), g_itemName, charsmax(g_itemName), g_dummy)
+  menu_destroy(menu)
 
   new timeID = strtol(g_itemInfo)
 
   if(timeID == ITEM_ENTER_GAG_TIME) {
     client_cmd(id, "messagemode enter_GagTime")
-
-    menu_destroy(menu)
     return PLUGIN_HANDLED
   }
 
@@ -621,13 +613,10 @@ public MenuHandler_SelectTime(const id, const menu, const item) {
 
   if(g_inEditMenu[id]) {
     MenuShow_EditGag(id)
-    menu_destroy(menu)
-
     return PLUGIN_HANDLED
   }
 
   MenuShow_SelectFlags(id)
-  menu_destroy(menu)
   return PLUGIN_HANDLED
 }
 
@@ -740,6 +729,8 @@ public MenuHandler_SelectFlags(const id, const menu, const item) {
   }
 
   menu_item_getinfo(menu, item, g_dummy, g_itemInfo, charsmax(g_itemInfo), g_itemName, charsmax(g_itemName), g_dummy)
+  menu_destroy(menu)
+
   new itemIndex = strtol(g_itemInfo)
 
   switch(itemIndex) {
@@ -757,13 +748,11 @@ public MenuHandler_SelectFlags(const id, const menu, const item) {
       Gag_Save(id, target, time, flags, expireAt)
       GagData_Reset(g_adminTempData[id])
 
-      menu_destroy(menu)
       return PLUGIN_HANDLED
     }
   }
 
   MenuShow_SelectFlags(id)
-  menu_destroy(menu)
   return PLUGIN_HANDLED
 }
 
@@ -855,10 +844,10 @@ public MenuCallback_ShowGag(const id, const menu, const item) {
 public MenuHandler_ShowGag(const id, const menu, const item) {
   enum { menu_ComfirmRemove, menu_EditGagProperties }
 
+  menu_destroy(menu)
+
   if(item == MENU_EXIT || item < 0) {
     MenuShow_PlayersList(id)
-
-    menu_destroy(menu)
     return PLUGIN_HANDLED
   }
 
@@ -869,7 +858,6 @@ public MenuHandler_ShowGag(const id, const menu, const item) {
     client_print_color(id, print_team_red, "%L %L", id, "Gag_prefix", id, "Gag_PlayerNotConnected")
 
     MenuShow_PlayersList(id)
-    menu_destroy(menu)
     return PLUGIN_HANDLED
   }
 
@@ -878,7 +866,6 @@ public MenuHandler_ShowGag(const id, const menu, const item) {
     Gag_Remove(id, target)
 
     MenuShow_PlayersList(id)
-    menu_destroy(menu)
     return PLUGIN_HANDLED
   }
 
@@ -897,12 +884,10 @@ public MenuHandler_ShowGag(const id, const menu, const item) {
     g_inEditMenu[id] = true
 
     MenuShow_EditGag(id)
-    menu_destroy(menu)
     return PLUGIN_HANDLED
   }
 
   MenuShow_PlayersList(id)
-  menu_destroy(menu)
   return PLUGIN_HANDLED
 }
 
@@ -971,8 +956,9 @@ static MenuShow_EditGag(const id) {
   menu_addblank2(menu)
   menu_addblank2(menu)
 
-  if(ca_gag_common_chat_block)
+  if(ca_gag_common_chat_block) {
     menu_addblank2(menu)
+  }
 
   menu_additem(menu, fmt("%L", id, "Gag_MenuItem_Confirm"), fmt("%i", ITEM_CONFIRM), .callback = callback)
 
@@ -1028,8 +1014,9 @@ public MenuHandler_EditGag(const id, const menu, const item) {
     return PLUGIN_HANDLED
   }
 
-
   menu_item_getinfo(menu, item, g_dummy, g_itemInfo, charsmax(g_itemInfo), g_itemName, charsmax(g_itemName), g_dummy)
+  menu_destroy(menu)
+
   new itemIndex = strtol(g_itemInfo)
 
   switch(itemIndex) {
@@ -1038,8 +1025,6 @@ public MenuHandler_EditGag(const id, const menu, const item) {
     case gagFlag_Voice:    g_adminTempData[id][gd_reason][r_flags] ^= gagFlag_Voice
     case ITEM_REASON: {
       MenuShow_SelectReason(id)
-
-      menu_destroy(menu)
       return PLUGIN_HANDLED
     }
     case ITEM_CONFIRM: {
@@ -1063,13 +1048,11 @@ public MenuHandler_EditGag(const id, const menu, const item) {
       GagData_Reset(g_adminTempData[id])
       g_inEditMenu[id] = false
 
-      menu_destroy(menu)
       return PLUGIN_HANDLED
     }
   }
 
   MenuShow_EditGag(id)
-  menu_destroy(menu)
   return PLUGIN_HANDLED
 }
 /*
@@ -1239,7 +1222,7 @@ public SrvCmd_AddReason() {
   enum any: args_s { arg_cmd, arg_reason, arg_flags, arg_time }
 
   new argCount = read_argc()
-  if(argCount < 2 || argCount > 4){
+  if(argCount < 2 || argCount > 4) {
     server_print("\tUsage: ca_gag_add_reason <reason> [flags] [time]")
     return
   }
@@ -1266,6 +1249,24 @@ public SrvCmd_AddReason() {
   CA_Log(logLevel_Debug, "ADD: Reason template[#%i]: '%s' (time='%s', flags='%s')",\
     g_gagReasonsTemplates_size, reason[r_name], args[arg_time], bits_to_flags(reason[r_flags])\
   )
+}
+
+public SrvCmd_AddWhitelistCmd() {
+  enum { arg_chat_cmd = 1 }
+
+  new argCount = read_argc()
+  if(argCount != 2) {
+    server_print("\tUsage: ca_gag_add_chat_whitelist_cmd <cmd>")
+    return
+  }
+
+  new whitelistCmd[MAX_WHITELIST_CMD_LEN]
+  read_argv(arg_chat_cmd, whitelistCmd, charsmax(whitelistCmd))
+
+  ArrayPushArray(g_chatWhitelistCmds, whitelistCmd)
+  g_chatWhitelistCmds_size = ArraySize(g_chatWhitelistCmds)
+
+  CA_Log(logLevel_Debug, "ADD: Whitelist chat cmd[#%i]: %s", g_chatWhitelistCmds_size, whitelistCmd)
 }
 
 public SrvCmd_ShowTemplates() {
@@ -1306,6 +1307,20 @@ static Message_ChatBlocked(const target) {
     client_print_color(target, print_team_red, "%L %L %L %s", target, "Gag_prefix", target, "Gag_NotifyPlayer_BlockedChat", target, "Gag_MenuItem_Left", expireLeftStr)
   }
 }
+
+static bool: IsWhitelistCmd(const message[]) {
+  new whitelistCmd[MAX_WHITELIST_CMD_LEN]
+
+  for(new i; i < g_chatWhitelistCmds_size; i++) {
+    ArrayGetArray(g_chatWhitelistCmds, i, whitelistCmd)
+
+    if(strcmp(message, whitelistCmd) == 0) {
+      return true
+    }
+  }
+
+  return false
+}
 /*
  * @endsection user cmds handling
  */
@@ -1328,7 +1343,7 @@ public CA_Client_Voice(const listener, const sender) {
 
 public CA_Client_Say(id, const bool: isTeamMessage, const message[]) {
   if(CmdRouter(id, message))
-    return PLUGIN_CONTINUE
+    return CA_CONTINUE
 
   new bool: hasBlock
   if(isTeamMessage) {
@@ -1338,6 +1353,10 @@ public CA_Client_Say(id, const bool: isTeamMessage, const message[]) {
   }
 
   if(!hasBlock) {
+    return CA_CONTINUE
+  }
+
+  if(IsWhitelistCmd(message)) {
     return CA_CONTINUE
   }
 
@@ -1448,11 +1467,14 @@ public CA_Storage_Removed( ) {
 
 
 static LoadConfig() {
-  if(!g_gagReasonsTemplates) {
-    g_gagReasonsTemplates = ArrayCreate(reason_s)
-  } else if(ArraySize(g_gagReasonsTemplates) > 0) {
+  if(ArraySize(g_gagReasonsTemplates) > 0) {
     ArrayClear(g_gagReasonsTemplates)
     g_gagReasonsTemplates_size = 0
+  }
+
+  if(ArraySize(g_chatWhitelistCmds) > 0) {
+    ArrayClear(g_chatWhitelistCmds)
+    g_chatWhitelistCmds_size = 0
   }
 
   AutoExecConfig(true, "CA_Gag", "ChatAdditions")
@@ -1460,7 +1482,9 @@ static LoadConfig() {
   new configsDir[PLATFORM_MAX_PATH]
   get_configsdir(configsDir, charsmax(configsDir))
 
+  server_cmd("exec %s/plugins/ChatAdditions/CA_Gag.cfg", configsDir)
   server_cmd("exec %s/plugins/ChatAdditions/ca_gag_reasons.cfg", configsDir)
+  server_cmd("exec %s/plugins/ChatAdditions/ca_gag_chat_whitelist_cmds.cfg", configsDir)
   server_exec()
 
   ParseTimes()
@@ -1573,9 +1597,9 @@ static Get_GagFlags_Names(gag_flags_s: flags) {
   if(ca_gag_common_chat_block && (flags & gagFlag_SayTeam))
     flags ^= gagFlag_SayTeam
 
-  for(new i = 0; i < sizeof(GAG_FLAGS_STR); i++) {
+  for(new i; i < sizeof(GAG_FLAGS_STR); i++) {
     if(flags & gag_flags_s: (1 << i)) {
-      strcat(buffer, fmt("%s + ", GAG_FLAGS_STR[i]), charsmax(buffer));
+      strcat(buffer, fmt("%s + ", GAG_FLAGS_STR[i]), charsmax(buffer))
     }
   }
 
