@@ -2,7 +2,7 @@
 #include <amxmisc>
 #include <fakemeta>
 
-#include <grip>
+#include <easy_http>
 #include <ChatAdditions>
 
 #pragma tabsize 4
@@ -12,12 +12,12 @@
 enum logType_s {
     _Default,
     _LogToDir,
-    _LogToDirSilent
+    _LogToDirSilent,
+    _LogToAlertMessage,
 }
 
 new logType_s: ca_log_type,
     logLevel_s: ca_log_level = logLevel_Debug,
-    g_logsPath[PLATFORM_MAX_PATH],
     bool: ca_update_notify,
     ca_log_autodelete_time
 
@@ -51,13 +51,10 @@ public stock const PluginDescription[]  = "A core plugin for control different t
 public plugin_precache() {
     register_plugin(PluginName, PluginVersion, PluginAuthor)
 
-    create_cvar("ChatAdditions_version", PluginVersion, (FCVAR_SERVER | FCVAR_SPONLY | FCVAR_UNLOGGED))
-
-    GetLogsFilePath(g_logsPath, .dir = LOG_FOLDER)
+    create_cvar("ChatAdditions_version", PluginVersion, FCVAR_SERVER)
 
     Create_CVars()
-
-    AutoExecConfig(true, "ChatAdditions_core", "ChatAdditions")
+    CheckUpdate()
 }
 
 public plugin_init() {
@@ -77,8 +74,6 @@ public plugin_init() {
     CheckAutoDelete()
 
     CA_Log(logLevel_Debug, "Chat Additions: Core initialized!")
-
-    set_task_ex(6.274, "_OnConfigsExecuted")
 }
 
 public plugin_end() {
@@ -87,39 +82,40 @@ public plugin_end() {
     DestroyForward(g_fwdClientChangeName)
 }
 
-public _OnConfigsExecuted() {
-    CheckUpdate()
-}
-
 CheckAutoDelete() {
-    if (ca_log_autodelete_time > 0) {
-        if (dir_exists(g_logsPath)) {
-            new logFile[PLATFORM_MAX_PATH]
-            new dirHandle
-            new subDirectory[PLATFORM_MAX_PATH]
-            new deleteTime
+    if (ca_log_autodelete_time <= 0)
+        return
 
-            deleteTime = get_systime() - (ca_log_autodelete_time * 60 * 60 * 24)
+    new logsPath[PLATFORM_MAX_PATH]
+    GetLogsFilePath(logsPath, .dir = LOG_FOLDER)
 
-            dirHandle = open_dir(g_logsPath, logFile, charsmax(logFile))
+    if (!dir_exists(logsPath))
+        return
 
-            if (dirHandle) {
-                while (next_file(dirHandle, logFile, charsmax(logFile))) {
-                    if (logFile[0] == '.')
-                        continue
+    new logFile[PLATFORM_MAX_PATH]
+    new dirHandle
+    dirHandle = open_dir(logsPath, logFile, charsmax(logFile))
+    if (!dirHandle)
+        return
 
-                    if (containi(logFile, ".log") == -1) {
-                        formatex(subDirectory, charsmax(subDirectory), "%s/%s", g_logsPath, logFile)
+    new subDirectory[PLATFORM_MAX_PATH]
+    new deleteTime = get_systime() - (ca_log_autodelete_time * (60 * 60 * 24))
 
-                        ReadFolder(deleteTime, subDirectory)
+    while (next_file(dirHandle, logFile, charsmax(logFile))) {
+        if (logFile[0] == '.')
+            continue
 
-                        continue
-                    }
-                }
-                close_dir(dirHandle)
-            }
+        if (containi(logFile, ".log") == -1) {
+            formatex(subDirectory, charsmax(subDirectory), "%s/%s", logsPath, logFile)
+
+            // TODO: refactor this
+            ReadFolder(deleteTime, subDirectory)
+
+            continue
         }
     }
+
+    close_dir(dirHandle)
 }
 
 ReadFolder(deleteTime, logPath[]) {
@@ -128,7 +124,7 @@ ReadFolder(deleteTime, logPath[]) {
     new fileTime
 
     if (dirHandle) {
-        do 
+        do
         {
             if (logFile[0] == '.') {
                 continue
@@ -152,19 +148,26 @@ Create_CVars() {
 
     bind_pcvar_num(create_cvar("ca_log_type", "1",
             .description = fmt("Log file type^n \
-                0 = log to common amxx log file (logs/L*.log)^n \
-                1 = log to plugins folder (logs/%s/[plugin name]/L*.log)^n \
-                2 = silent log to plugins folder (logs/%s/[plugin name]/L*.log)", LOG_FOLDER, LOG_FOLDER),
+                    0 = log to common amxx log file (logs/L*.log)^n \
+                    1 = log to plugins folder (logs/%s/[plugin name]/L*.log)^n \
+                    2 = silent log to plugins folder (logs/%s/[plugin name]/L*.log)^n \
+                    3 = use elog_message) \
+                ",
+                LOG_FOLDER, LOG_FOLDER),
             .has_min = true, .min_val = 0.0,
-            .has_max = true, .max_val = float(_LogToDirSilent)
+            .has_max = true, .max_val = float(logType_s) - 1.0
         ),
         ca_log_type
     )
 
     bind_pcvar_num(create_cvar("ca_log_level", "1",
-            .description = "Log level^n 0 = disable logs^n 1 = add info messages logs^n 2 = add warinigs info^n 3 = add debug messages",
+            .description = "Log level^n \
+                0 = disable logs^n \
+                1 = add info messages logs^n \
+                2 = add warinigs info^n \
+                3 = add debug messages",
             .has_min = true, .min_val = 0.0,
-            .has_max = true, .max_val = float(logLevel_Debug)
+            .has_max = true, .max_val = float(logLevel_s) - 1.0
         ),
         ca_log_level
     )
@@ -182,9 +185,17 @@ Create_CVars() {
             0 - The logs won't be deleted.^n \
             > 0 - The logs will be deleted at the time inserted.",
             .has_min = true, .min_val = 0.0
-            ), 
+            ),
         ca_log_autodelete_time
     )
+
+    AutoExecConfig(true, "ChatAdditions_core", LOG_FOLDER)
+
+    new configsDir[PLATFORM_MAX_PATH]
+    get_configsdir(configsDir, charsmax(configsDir))
+
+    server_cmd("exec %s/plugins/%s/ChatAdditions_core.cfg", configsDir, LOG_FOLDER)
+    server_exec()
 }
 
 public plugin_natives() {
@@ -198,11 +209,17 @@ public plugin_natives() {
 }
 
 public ModuleFilter(const library[], LibType: type) {
-    return strcmp("grip", library) == 0 ? PLUGIN_HANDLED : PLUGIN_CONTINUE
+    return strcmp("easy_http", library) == 0 ? PLUGIN_HANDLED : PLUGIN_CONTINUE
 }
 
 public NativeFilter(const nativeName[], index, trap) {
-    return strncmp(nativeName, "grip_", 5) == 0 ? PLUGIN_HANDLED : PLUGIN_CONTINUE
+    if (strncmp(nativeName, "ezhttp_", 7) == 0)
+        return PLUGIN_HANDLED
+
+    if (strncmp(nativeName, "ezjson_", 7) == 0)
+        return PLUGIN_HANDLED
+
+    return PLUGIN_CONTINUE
 }
 
 public ClCmd_Say(const id) {
@@ -277,39 +294,43 @@ public bool: native_CA_Log(const plugin_id, const argc) {
 
     new logLevel_s: level = logLevel_s: get_param(arg_level)
 
-    if (ca_log_level < level) {
+    if (ca_log_level < level)
         return false
-    }
 
     new msg[2048]
     vdformat(msg, charsmax(msg), arg_msg, arg_format)
 
     new logsFile[PLATFORM_MAX_PATH]
 
-    if (ca_log_type > _Default)
-    {
-        new pluginName[32]
+    if (ca_log_type == _LogToDir || ca_log_type == _LogToDirSilent) {
+        new logsPath[PLATFORM_MAX_PATH]
+        get_localinfo("amxx_logs", logsPath, charsmax(logsPath))
+
+        new pluginName[PLATFORM_MAX_PATH]
         get_plugin(plugin_id, pluginName, charsmax(pluginName))
 
         replace(pluginName, charsmax(pluginName), ".amxx", "")
 
-        new logsPath[PLATFORM_MAX_PATH]
-        formatex(logsPath, charsmax(logsPath), "%s/%s", g_logsPath, pluginName)
+        formatex(logsPath, charsmax(logsPath), "%s/%s", logsPath, pluginName)
 
-        if (!dir_exists(logsPath)) {
+        if (!dir_exists(logsPath))
             mkdir(logsPath)
-        }
 
         new year, month, day
         date(year, month, day)
 
-        formatex(logsFile, charsmax(logsFile), "%s/%s__%i-%02i-%02i.log", logsPath, pluginName, year, month, day)
+        formatex(logsFile, charsmax(logsFile), "%s/%s__%i-%02i-%02i.log",
+            logsPath,
+            pluginName[sizeof(LOG_FOLDER)],
+            year, month, day
+        )
     }
 
     switch (ca_log_type) {
-        case _LogToDir:         log_to_file(logsFile, msg)
         case _Default:          log_amx(msg)
+        case _LogToDir:         log_to_file(logsFile, msg)
         case _LogToDirSilent:   log_to_file_ex(logsFile, msg)
+        case _LogToAlertMessage: elog_message(msg)
     }
 
     return true
@@ -354,9 +375,9 @@ static CheckUpdate() {
     if (strcmp(CA_VERSION, "CA_VERSION") == 0 || contain(CA_VERSION, ".") == -1) // ignore custom builds
         return
 
-    if (is_module_loaded("grip") == -1) {
-        CA_Log(logLevel_Warning, "The `GRip` module is not loaded! The new version cannot be verified.")
-        CA_Log(logLevel_Warning, "Please install GRip: `https://github.com/In-line/grip` or disable update checks (`ca_update_notify `0`).")
+    if (is_module_loaded("Amxx Easy Http") == -1) {
+        CA_Log(logLevel_Warning, "The `AmxxEasyHttp` module is not loaded! The new version cannot be verified.")
+        CA_Log(logLevel_Warning, "Please install AmxxEasyHttp: `https://github.com/Next21Team/AmxxEasyHttp` or disable update checks (`ca_update_notify `0`).")
 
         return
     }
@@ -365,51 +386,45 @@ static CheckUpdate() {
 }
 
 static RequestNewVersion(const link[]) {
-    new GripRequestOptions: options = grip_create_default_options()
-    new GripBody: body = grip_body_from_string("")
-
-    grip_request(
-        link,
-        body,
-        GripRequestTypeGet,
-        "@RequestHandler",
-        options
-    )
-
-    grip_destroy_body(body)
-    grip_destroy_options(options)
+    ezhttp_get(link, "@RequestHandler")
 }
 
-@RequestHandler() {
+@RequestHandler(EzHttpRequest: request_id) {
+    if (ezhttp_get_error_code(request_id) != EZH_OK) {
+        new error[64]
+        ezhttp_get_error_message(request_id, error, charsmax(error))
+        server_print("Response error: %s", error)
+        return
+    }
+
+
     new response[8192]
-    grip_get_response_body_string(response, charsmax(response))
+    ezhttp_get_data(request_id, response, charsmax(response))
 
     if (contain(response, "tag_name") == -1) {
         CA_Log(logLevel_Warning, " > Wrong response! (don't contain `tag_name`). res=`%s`", response)
         return
     }
 
-    static errorBuffer[1024]
-    new GripJSONValue: json = grip_json_parse_string(response, errorBuffer, charsmax(errorBuffer))
-
-    if (json == Invalid_GripJSONValue) {
-        CA_Log(logLevel_Warning, " > Can't parse response JSON! (error=`%s`)", errorBuffer)
+    new EzJSON: json = ezjson_parse(response)
+    if (json == EzInvalid_JSON) {
+        CA_Log(logLevel_Warning, " > Can't parse response JSON!")
         goto END
     }
 
     new tag_name[32]
-    grip_json_object_get_string(json, "tag_name", tag_name, charsmax(tag_name))
+    ezjson_object_get_string(json, "tag_name", tag_name, charsmax(tag_name))
 
     if (CmpVersions(CA_VERSION, tag_name) >= 0)
         goto END
 
     new html_url[256]
-    grip_json_object_get_string(json, "html_url", html_url, charsmax(html_url))
+    ezjson_object_get_string(json, "html_url", html_url, charsmax(html_url))
 
     NotifyUpdate(tag_name, html_url)
 
     END:
-    grip_destroy_json_value(json)
+    ezjson_free(json)
 }
 
 static NotifyUpdate(const newVersion[], const URL[]) {
