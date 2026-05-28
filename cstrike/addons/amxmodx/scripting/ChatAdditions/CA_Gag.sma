@@ -12,7 +12,12 @@
 
     /* ----- START SETTINGS ----- */
 const Float: GAG_THINKER_FREQ = 3.0
+// #define DEBUG
     /* ----- END OF SETTINGS ----- */
+
+#if defined DEBUG
+    #pragma showstackusageinfo
+#endif
 
 static g_currentGags[MAX_PLAYERS + 1][gagData_s]
 static g_adminTempData[MAX_PLAYERS + 1][gagData_s]
@@ -307,9 +312,11 @@ static MenuShow_PlayersList(const id, const nickname[] = "") {
     for(new i; i < count; i++) {
         new target = players[i]
 
+        #if !defined DEBUG
         if (target == id) {
             continue
         }
+        #endif
 
         new name[MAX_NAME_LENGTH + 16]
         get_user_name(target, name, charsmax(name))
@@ -1067,11 +1074,13 @@ public ClCmd_Gag(const id, const level, const cid) {
         return PLUGIN_HANDLED
     }
 
+    #if !defined DEBUG
     if (get_playersnum_ex(GetPlayers_ExcludeBots | GetPlayers_ExcludeHLTV) < 2) {
         UTIL_SendAudio(id, ca_gag_sound_error)
         client_print_color(id, print_team_default, "%L %L", id, "Gag_prefix", id, "Gag_NotEnoughPlayers")
         return PLUGIN_HANDLED
     }
+    #endif
 
     MenuShow_PlayersList(id)
     return PLUGIN_HANDLED
@@ -1154,7 +1163,9 @@ public ClCmd_EnterGagTime(const id, const level, const cid) {
 }
 
 public ConCmd_amx_gag(const id, const level, const cid) {
-    enum amx_gag_s { /* arg_cmd, */ arg_player = 1, arg_reason, arg_time, arg_flags }
+    const AMX_GAG_ARG_COUNT = 5
+    enum { arg_cmd, arg_player, arg_reason, arg_time, arg_flags }
+    #pragma unused arg_cmd
 
     if (!cmd_access(id, level, cid, 1)) {
         return PLUGIN_HANDLED
@@ -1162,16 +1173,16 @@ public ConCmd_amx_gag(const id, const level, const cid) {
 
     new argc = read_argc()
 
-    if (argc == 1 || argc >= _: amx_gag_s) {
+    if (argc < 2 || argc > AMX_GAG_ARG_COUNT) {
         console_print(id, "^t Wrong arguments count: `%i`", argc)
         console_print(id, "^t Usage: amx_gag ^"[nickname | STEAM_ID | userID | IP]^" ^"<reason>^" <time> <flags>^n")
 
         return PLUGIN_HANDLED
     }
 
-    new args[amx_gag_s][255]
+    new args[AMX_GAG_ARG_COUNT][255]
     for (new i; i < argc; i++) {
-        read_argv(i, args[amx_gag_s: i], charsmax(args[]))
+        read_argv(i, args[i], charsmax(args[]))
     }
 
     new target = FindPlayerByTarget(args[arg_player])
@@ -1219,17 +1230,18 @@ public ConCmd_amx_gag(const id, const level, const cid) {
 }
 
 public SrvCmd_AddReason() {
-    enum any: args_s { arg_cmd, arg_reason, arg_flags, arg_time }
+    const ARGS_COUNT = 4
+    enum { arg_cmd, arg_reason, arg_flags, arg_time }
 
     new argCount = read_argc()
-    if (argCount < 2 || argCount > 4) {
+    if (argCount < 2 || argCount > ARGS_COUNT) {
         server_print("^tUsage: ca_gag_add_reason <reason> [flags] [time]")
         return
     }
 
-    new args[args_s][256]
+    new args[ARGS_COUNT][256]
 
-    for(new arg = arg_cmd; arg < sizeof(args); arg++) {
+    for(new arg = arg_cmd; arg < ARGS_COUNT; arg++) {
         read_argv(arg, args[arg], charsmax(args[]))
     }
 
@@ -1252,10 +1264,11 @@ public SrvCmd_AddReason() {
 }
 
 public SrvCmd_AddWhitelistCmd() {
+    const ARGS_COUNT = 2
     enum { arg_chat_cmd = 1 }
 
     new argCount = read_argc()
-    if (argCount != 2) {
+    if (argCount != ARGS_COUNT) {
         server_print("^tUsage: ca_gag_add_chat_whitelist_cmd <cmd>")
         return
     }
@@ -1672,6 +1685,12 @@ static bool: Gag_Remove(const id, const target) {
         }
 
         show_activity_ex(id, fmt("%n", id), "%l", "Gag_AdminUngagPlayer", g_currentGags[target][gd_name])
+
+        CA_Log(logLevel_Info, "Gag: ^"%n^" remove gag from ^"%n^" (type:^"%s^") (time:^"%s^") (reason:^"%s^")", \
+            id, target, bits_to_flags(gag_flags_s: g_currentGags[target][gd_reason][r_flags]), \
+            Get_TimeString_seconds(LANG_PLAYER, g_currentGags[target][gd_reason][r_time]), \
+            g_currentGags[target][gd_reason][r_name] \
+        )
 
         GagData_Reset(g_adminTempData[id])
         GagData_Reset(g_currentGags[target])
